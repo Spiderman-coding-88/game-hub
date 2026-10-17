@@ -1,0 +1,2636 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0b10" />
+    <meta
+      name="description"
+      content="A polished standalone Sudoku game with Easy, Medium and Hard stages, persistent profile progress, fresh puzzles, hints, timer, achievements and statistics."
+    />
+    <title>Sudoku — Mind Under Pressure</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #08090d;
+        --panel: rgba(16, 18, 25, 0.84);
+        --panel-2: rgba(22, 24, 32, 0.9);
+        --line: rgba(255, 255, 255, 0.09);
+        --line-strong: rgba(255, 255, 255, 0.16);
+        --text: #f2f4f7;
+        --muted: #8d94a2;
+        --soft: #bcc2cc;
+        --accent: #f5f6f8;
+        --accent-ink: #090a0d;
+        --easy: #81dca8;
+        --medium: #f3ca72;
+        --hard: #ff7a7a;
+        --red: (red, 10%);
+        --shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+        --radius: 24px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(
+            circle at 80% 10%,
+            rgba(255, 255, 255, 0.055),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at 8% 82%,
+            rgba(120, 140, 180, 0.06),
+            transparent 26%
+          ),
+          var(--bg);
+        color: var(--text);
+        font-family: "Montserrat", Arial, sans-serif;
+        letter-spacing: 0.01em;
+      }
+      button {
+        font: inherit;
+      }
+      button:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 3px;
+      }
+
+      .app-shell {
+        position: relative;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+      .bg-grid {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.18;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.9),
+          transparent 86%
+        );
+      }
+      .noise {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.025;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        height: 76px;
+        padding: 0 34px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        background: rgba(8, 9, 13, 0.78);
+        backdrop-filter: blur(20px);
+      }
+      .brand {
+        background: none;
+        border: 0;
+        color: inherit;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+        color: var(--red);
+      }
+      .brand-mark {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line-strong);
+        border-radius: 10px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff, #aaa);
+        color: #0b0c10;
+        box-shadow: 0 8px 20px rgba(255, 255, 255, 0.08);
+      }
+      .brand strong {
+        display: block;
+        font-size: 13px;
+        letter-spacing: 0.18em;
+      }
+      .brand small {
+        display: block;
+        color: var(--muted);
+        margin-top: 2px;
+        font-size: 9px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+      .nav-tabs {
+        display: flex;
+        gap: 8px;
+      }
+      .nav-btn {
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        padding: 9px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .nav-btn:hover,
+      .nav-btn.active {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--line);
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .points-chip {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+      .icon-btn {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--soft);
+        border-radius: 10px;
+        width: 36px;
+        height: 36px;
+        cursor: pointer;
+      }
+      .icon-btn:hover {
+        background: rgba(255, 255, 255, 0.07);
+      }
+      .icon-btn.danger:hover {
+        color: var(--hard);
+        border-color: rgba(255, 122, 122, 0.35);
+      }
+
+      main {
+        position: relative;
+        z-index: 1;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 34px;
+      }
+      .view {
+        display: none;
+        animation: viewIn 0.35s ease both;
+      }
+      .active-view {
+        display: block;
+      }
+      @keyframes viewIn {
+        from {
+          opacity: 0;
+          transform: translateY(7px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(16px);
+      }
+      .compact-panel {
+        padding: 24px 28px;
+      }
+      .eyebrow {
+        display: inline-block;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      .hero {
+        min-height: 420px;
+        padding: 52px;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        align-items: center;
+        overflow: hidden;
+        position: relative;
+      }
+      .hero:after {
+        content: "";
+        position: absolute;
+        width: 440px;
+        height: 440px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.08),
+          transparent 68%
+        );
+        right: -140px;
+        top: -180px;
+      }
+      .hero-copy h1 {
+        font-size: clamp(46px, 7vw, 88px);
+        line-height: 0.93;
+        letter-spacing: -0.06em;
+        margin: 16px 0 22px;
+        max-width: 680px;
+      }
+      .hero-copy h1 em {
+        font-style: normal;
+        color: #9ea6b5;
+      }
+      .hero-copy p {
+        max-width: 610px;
+        color: var(--muted);
+        line-height: 1.8;
+        font-size: 14px;
+      }
+      .hero-stats {
+        display: flex;
+        gap: 28px;
+        margin-top: 30px;
+      }
+      .hero-stats div {
+        min-width: 95px;
+      }
+      .hero-stats strong {
+        display: block;
+        font-size: 24px;
+      }
+      .hero-stats span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .hero-art {
+        position: relative;
+        min-height: 300px;
+        display: grid;
+        place-items: center;
+      }
+      .orbit {
+        position: absolute;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: spin 18s linear infinite;
+      }
+      .orbit:before {
+        content: "";
+        position: absolute;
+        width: 7px;
+        height: 7px;
+        background: #fff;
+        border-radius: 50%;
+        top: 50%;
+        left: -4px;
+        box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+      }
+      .orbit-a {
+        width: 300px;
+        height: 180px;
+        transform: rotate(-26deg);
+      }
+      .orbit-b {
+        width: 250px;
+        height: 250px;
+        animation-duration: 25s;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .hero-sudoku-grid {
+        position: relative;
+        z-index: 2;
+        width: 230px;
+        height: 230px;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 20px;
+        transform: rotate(7deg);
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.07),
+          rgba(255, 255, 255, 0.015)
+        );
+        box-shadow: 0 25px 55px rgba(0, 0, 0, 0.45);
+      }
+      .hero-sudoku-grid span {
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.82);
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .hero-sudoku-grid span:nth-child(3n) {
+        border-right-color: rgba(255, 255, 255, 0.14);
+      }
+      .hero-sudoku-grid span:nth-child(n + 19):nth-child(-n + 27),
+      .hero-sudoku-grid span:nth-child(n + 46):nth-child(-n + 54) {
+        border-bottom-color: rgba(255, 255, 255, 0.14);
+      }
+
+      .stage-section {
+        margin-top: 52px;
+      }
+      .section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 30px;
+        margin-bottom: 18px;
+      }
+      .section-heading h2,
+      .card-heading h2 {
+        margin: 7px 0 0;
+        font-size: 25px;
+        letter-spacing: -0.03em;
+      }
+      .section-heading p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 420px;
+        text-align: right;
+        font-size: 12px;
+        line-height: 1.7;
+      }
+      .stage-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+      .stage-card {
+        appearance: none;
+        text-align: left;
+        color: var(--text);
+        position: relative;
+        min-height: 270px;
+        padding: 24px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        cursor: pointer;
+        overflow: hidden;
+        background: linear-gradient(
+          150deg,
+          rgba(255, 255, 255, 0.065),
+          rgba(255, 255, 255, 0.015)
+        );
+        transition: 0.25s;
+      }
+      .stage-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--line-strong);
+        box-shadow: 0 22px 45px rgba(0, 0, 0, 0.28);
+      }
+      .stage-card:after {
+        content: "";
+        position: absolute;
+        inset: auto -40px -60px auto;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        filter: blur(12px);
+        opacity: 0.17;
+      }
+      .stage-card.easy:after {
+        background: var(--easy);
+      }
+      .stage-card.medium:after {
+        background: var(--medium);
+      }
+      .stage-card.hard:after {
+        background: var(--hard);
+      }
+      .stage-top,
+      .stage-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .stage-no {
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 0.12em;
+      }
+      .stage-tag {
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        padding: 6px 8px;
+        border-radius: 999px;
+      }
+      .stage-icon {
+        font-size: 31px;
+        margin-top: 32px;
+        opacity: 0.82;
+      }
+      .stage-card h3 {
+        margin: 8px 0 8px;
+        font-size: 28px;
+      }
+      .stage-card p {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+        max-width: 260px;
+      }
+      .stage-bottom {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        bottom: 23px;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        color: var(--soft);
+      }
+      .stage-bottom span:last-child {
+        color: #fff;
+      }
+      .tips {
+        margin-top: 24px;
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: center;
+      }
+      .tips h3 {
+        margin: 6px 0 0;
+        font-size: 15px;
+      }
+      .tip-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .tip-row span {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .tip-row b {
+        color: #fff;
+        margin-right: 5px;
+      }
+
+      .game-head {
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 18px;
+      }
+      .back-btn {
+        background: none;
+        border: 0;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 0;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+      }
+      .back-btn:hover {
+        color: #fff;
+      }
+      .game-title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 8px;
+      }
+      .game-title-row h2 {
+        font-size: 24px;
+        margin: 0;
+        letter-spacing: -0.04em;
+      }
+      .difficulty-tag {
+        border-radius: 999px;
+        padding: 6px 9px;
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        border: 1px solid var(--line);
+      }
+      .game-head p {
+        color: var(--muted);
+        font-size: 11px;
+        margin: 6px 0 0;
+      }
+      .game-head-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .stat-block {
+        min-width: 72px;
+      }
+      .stat-block span {
+        display: block;
+        color: var(--muted);
+        font-size: 8px;
+        letter-spacing: 0.14em;
+      }
+      .stat-block strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 17px;
+      }
+      .action-btn {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--soft);
+        border-radius: 10px;
+        padding: 10px 13px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .action-btn:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.07);
+      }
+      .game-layout {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+      .side-panel {
+        padding: 22px;
+        position: sticky;
+        top: 94px;
+      }
+      .mini-section {
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 18px;
+      }
+      .mini-section:last-child {
+        border-bottom: 0;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+      .progress-ring-wrap {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        margin: 18px auto 8px;
+      }
+      .progress-ring {
+        transform: rotate(-90deg);
+      }
+      .ring-bg,
+      .ring-progress {
+        fill: none;
+        stroke-width: 8;
+      }
+      .ring-bg {
+        stroke: rgba(255, 255, 255, 0.06);
+      }
+      .ring-progress {
+        stroke: #fff;
+        stroke-linecap: round;
+        stroke-dasharray: 314.159;
+        stroke-dashoffset: 314.159;
+        transition: 0.35s;
+      }
+      .ring-label {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        align-content: center;
+      }
+      .ring-label strong {
+        font-size: 27px;
+        line-height: 1;
+      }
+      .ring-label span {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 9px;
+      }
+      .progress-caption {
+        text-align: center;
+        color: var(--muted);
+        font-size: 8px;
+        letter-spacing: 0.14em;
+      }
+      .controls-section {
+        display: grid;
+        gap: 8px;
+      }
+      .tool-btn {
+        display: grid;
+        grid-template-columns: 27px 1fr auto;
+        gap: 9px;
+        align-items: center;
+        width: 100%;
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 11px;
+        cursor: pointer;
+        text-align: left;
+      }
+      .tool-btn:hover {
+        background: rgba(255, 255, 255, 0.055);
+      }
+      .tool-btn > span:first-child {
+        display: grid;
+        place-items: center;
+        width: 27px;
+        height: 27px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .tool-btn b {
+        display: block;
+        font-size: 10px;
+      }
+      .tool-btn small {
+        display: block;
+        color: var(--muted);
+        margin-top: 2px;
+        font-size: 8px;
+      }
+      kbd {
+        font-size: 8px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 3px 5px;
+        min-width: 18px;
+        text-align: center;
+      }
+      .rules-section p {
+        color: var(--muted);
+        font-size: 10px;
+        line-height: 1.7;
+        margin-bottom: 0;
+      }
+      .rules-section strong {
+        color: var(--soft);
+      }
+
+      .board-wrap {
+        position: relative;
+        max-width: 680px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .sudoku-board {
+        width: 100%;
+        aspect-ratio: 1;
+        padding: 0px;
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        border-radius: 0px;
+        border: 1px solid var(--line-strong);
+        background: #0b0c10;
+        box-shadow:
+          0 24px 70px rgba(0, 0, 0, 0.5),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+        overflow: hidden;
+      }
+      .sudoku-cell {
+        min-width: 0;
+        min-height: 0;
+        position: relative;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.018);
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        color: #fff;
+        font-size: clamp(16px, 3.1vw, 28px);
+        font-weight: 700;
+        cursor: pointer;
+        user-select: none;
+        transition:
+          background 0.14s,
+          color 0.14s,
+          box-shadow 0.14s;
+      }
+      .sudoku-cell:nth-child(9n) {
+        border-right: 0;
+      }
+      .sudoku-cell:nth-child(3n) {
+        border-right-color: rgba(255, 255, 255, 0.17);
+      }
+      .sudoku-cell:nth-child(n + 19):nth-child(-n + 27),
+      .sudoku-cell:nth-child(n + 46):nth-child(-n + 54),
+      .sudoku-cell:nth-child(n + 73):nth-child(-n + 81) {
+        border-bottom-color: rgba(255, 255, 255, 0.17);
+      }
+      .sudoku-cell.given {
+        background: rgba(255, 255, 255, 0.038);
+        color: #f3f4f6;
+        cursor: default;
+      }
+      .sudoku-cell.user {
+        color: #aeb7c7;
+      }
+      .sudoku-cell.selected {
+        background: rgba(255, 255, 255, 0.13);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.17);
+      }
+      .sudoku-cell.peer {
+        background: rgba(255, 255, 255, 0.055);
+      }
+      .sudoku-cell.same-number {
+        background: rgba(255, 255, 255, 0.09);
+      }
+      .sudoku-cell.error {
+        color: var(--hard);
+        animation: shake 0.22s ease;
+      }
+      .sudoku-cell.completed {
+        color: var(--easy);
+      }
+      @keyframes shake {
+        25% {
+          transform: translateX(-3px);
+        }
+        50% {
+          transform: translateX(3px);
+        }
+        75% {
+          transform: translateX(-2px);
+        }
+      }
+      .number-pad {
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .num-btn {
+        height: 45px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.035);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: 0.16s;
+      }
+      .num-btn:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .num-btn.disabled {
+        opacity: 0.34;
+        cursor: not-allowed;
+      }
+      .num-btn.queued {
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+      }
+      .selection-helper {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 8px;
+        letter-spacing: 0.13em;
+        padding: 9px 3px 0;
+      }
+      .selection-helper span:last-child {
+        color: var(--soft);
+      }
+
+      .paused-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: grid;
+        place-items: center;
+        border-radius: 22px;
+        background: rgba(6, 7, 10, 0.78);
+        backdrop-filter: blur(7px);
+      }
+      .paused-card {
+        width: min(330px, 86%);
+        text-align: center;
+        padding: 30px;
+        border: 1px solid var(--line-strong);
+        background: var(--panel-2);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+      }
+      .paused-card h3 {
+        margin: 8px 0 18px;
+        font-size: 28px;
+        letter-spacing: -0.04em;
+      }
+      .hidden {
+        display: none !important;
+      }
+
+      .profile-hero {
+        padding: 32px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 18px;
+      }
+      .profile-avatar {
+        width: 72px;
+        height: 72px;
+        display: grid;
+        place-items: center;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #fff, #aeb4bd);
+        color: #0b0c0f;
+        font-weight: 800;
+        font-size: 30px;
+        box-shadow: 0 16px 35px rgba(0, 0, 0, 0.25);
+      }
+      .profile-hero h1 {
+        margin: 7px 0 5px;
+        font-size: 35px;
+        letter-spacing: -0.05em;
+      }
+      .profile-hero p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .profile-score {
+        text-align: right;
+      }
+      .profile-score span,
+      .profile-score small {
+        display: block;
+        color: var(--muted);
+        font-size: 8px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .profile-score strong {
+        display: block;
+        font-size: 43px;
+        letter-spacing: -0.06em;
+        margin: 2px 0;
+      }
+      .profile-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+      }
+      .profile-card {
+        padding: 26px;
+        min-height: 240px;
+      }
+      .profile-card.wide,
+      .achievements-card {
+        grid-column: 1 / -1;
+      }
+      .mastery-list {
+        margin-top: 24px;
+        display: grid;
+        gap: 18px;
+      }
+      .mastery-row {
+        display: grid;
+        grid-template-columns: 210px 1fr 25px;
+        gap: 14px;
+        align-items: center;
+      }
+      .mastery-row > div:first-child {
+        display: grid;
+        grid-template-columns: 16px 1fr;
+        grid-template-rows: auto auto;
+        column-gap: 8px;
+        align-items: center;
+      }
+      .mastery-row strong {
+        font-size: 11px;
+      }
+      .mastery-row small {
+        grid-column: 2;
+        color: var(--muted);
+        font-size: 8px;
+        margin-top: 4px;
+      }
+      .mastery-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        grid-row: 1/3;
+      }
+      .easy-dot {
+        background: var(--easy);
+        box-shadow: 0 0 16px rgba(129, 220, 168, 0.3);
+      }
+      .medium-dot {
+        background: var(--medium);
+        box-shadow: 0 0 16px rgba(243, 202, 114, 0.25);
+      }
+      .hard-dot {
+        background: var(--hard);
+        box-shadow: 0 0 16px rgba(255, 122, 122, 0.25);
+      }
+      .mastery-bar {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .mastery-bar i {
+        display: block;
+        height: 100%;
+        width: 0;
+        border-radius: inherit;
+        transition: width 0.6s ease;
+        background: #fff;
+      }
+      .mastery-row > b {
+        font-size: 11px;
+        text-align: right;
+      }
+      .number-stats {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      .number-stats div {
+        padding: 17px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .number-stats strong {
+        font-size: 24px;
+        display: block;
+      }
+      .number-stats span {
+        color: var(--muted);
+        font-size: 8px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        display: block;
+        margin-top: 4px;
+      }
+      .time-list {
+        margin-top: 22px;
+        display: grid;
+        gap: 13px;
+      }
+      .time-list div {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 10px;
+      }
+      .time-list span {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .time-list strong {
+        font-size: 15px;
+      }
+      .card-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .muted-count {
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: 0.12em;
+      }
+      .achievement-grid {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .achievement {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 15px;
+        min-height: 118px;
+        background: rgba(255, 255, 255, 0.02);
+        opacity: 0.45;
+        filter: saturate(0.45);
+      }
+      .achievement.unlocked {
+        opacity: 1;
+        filter: none;
+        background: rgba(255, 255, 255, 0.045);
+      }
+      .achievement-icon {
+        font-size: 22px;
+      }
+      .achievement strong {
+        display: block;
+        margin-top: 9px;
+        font-size: 10px;
+      }
+      .achievement p {
+        color: var(--muted);
+        font-size: 8px;
+        line-height: 1.45;
+        margin: 4px 0 0;
+      }
+
+      .footer {
+        position: relative;
+        z-index: 1;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 34px 28px;
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        color: #626a77;
+        font-size: 8px;
+        letter-spacing: 0.14em;
+      }
+
+      .toast {
+        position: fixed;
+        z-index: 100;
+        left: 50%;
+        bottom: 28px;
+        transform: translate(-50%, 20px);
+        opacity: 0;
+        pointer-events: none;
+        background: #fff;
+        color: #08090d;
+        border-radius: 999px;
+        padding: 11px 15px;
+        font-weight: 800;
+        font-size: 10px;
+        transition: 0.25s;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+      .modal {
+        position: fixed;
+        z-index: 120;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+      }
+      .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        backdrop-filter: blur(8px);
+      }
+      .result-card,
+      .confirm-card {
+        position: relative;
+        z-index: 2;
+        width: min(450px, 100%);
+        padding: 34px;
+        text-align: center;
+        border-radius: 26px;
+        border: 1px solid var(--line-strong);
+        background: #111319;
+        box-shadow: var(--shadow);
+      }
+      .result-icon {
+        width: 64px;
+        height: 64px;
+        display: grid;
+        place-items: center;
+        margin: 18px auto;
+        border-radius: 50%;
+        background: rgba(129, 220, 168, 0.1);
+        border: 1px solid rgba(129, 220, 168, 0.34);
+        color: var(--easy);
+        font-size: 30px;
+        font-weight: 800;
+      }
+      .result-card h2,
+      .confirm-card h2 {
+        margin: 0;
+        font-size: 34px;
+        letter-spacing: -0.05em;
+      }
+      .result-card p,
+      .confirm-card p {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.7;
+        margin: 10px auto 22px;
+        max-width: 350px;
+      }
+      .result-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 18px 0 20px;
+      }
+      .result-stats div {
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        padding: 13px 8px;
+      }
+      .result-stats span {
+        color: var(--muted);
+        font-size: 7px;
+        letter-spacing: 0.14em;
+        display: block;
+      }
+      .result-stats strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 16px;
+      }
+      .result-actions {
+        display: flex;
+        gap: 9px;
+      }
+      .primary-btn,
+      .secondary-btn,
+      .danger-btn {
+        flex: 1;
+        border-radius: 11px;
+        padding: 12px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 800;
+      }
+      .primary-btn {
+        border: 1px solid #fff;
+        background: #fff;
+        color: #090a0d;
+      }
+      .secondary-btn {
+        border: 1px solid var(--line-strong);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+      }
+      .danger-btn {
+        border: 1px solid rgba(255, 122, 122, 0.35);
+        background: rgba(255, 122, 122, 0.1);
+        color: #ff9b9b;
+      }
+      .primary-btn:hover,
+      .secondary-btn:hover,
+      .danger-btn:hover {
+        transform: translateY(-1px);
+      }
+
+      @media (max-width: 1000px) {
+        main {
+          padding: 24px;
+        }
+        .hero {
+          padding: 34px;
+          grid-template-columns: 1fr;
+        }
+        .hero-art {
+          min-height: 260px;
+        }
+        .stage-grid {
+          grid-template-columns: 1fr;
+        }
+        .stage-card {
+          min-height: 220px;
+        }
+        .game-layout {
+          grid-template-columns: 1fr;
+        }
+        .side-panel {
+          position: relative;
+          top: auto;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 18px;
+        }
+        .mini-section {
+          margin: 0;
+          border-bottom: 0;
+          border-right: 1px solid var(--line);
+          padding-right: 18px;
+        }
+        .mini-section:last-child {
+          border-right: 0;
+          padding-right: 0;
+        }
+        .achievement-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 760px) {
+        .topbar {
+          padding: 0 16px;
+          height: 68px;
+        }
+        .brand small,
+        .nav-btn {
+          display: none;
+        }
+        .header-actions {
+          gap: 7px;
+        }
+        .points-chip {
+          padding: 8px 10px;
+          font-size: 9px;
+        }
+        main {
+          padding: 16px;
+        }
+        .hero {
+          min-height: auto;
+          padding: 26px;
+        }
+        .hero-copy h1 {
+          font-size: 52px;
+        }
+        .hero-art {
+          min-height: 220px;
+        }
+        .hero-sudoku-grid {
+          width: 185px;
+          height: 185px;
+        }
+        .orbit-a {
+          width: 220px;
+          height: 140px;
+        }
+        .orbit-b {
+          width: 200px;
+          height: 200px;
+        }
+        .section-heading,
+        .tips {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .section-heading p {
+          text-align: left;
+        }
+        .tip-row {
+          justify-content: flex-start;
+        }
+        .game-head {
+          padding: 16px;
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .game-head-actions {
+          width: 100%;
+          justify-content: space-between;
+          gap: 10px;
+        }
+        .side-panel {
+          display: block;
+        }
+        .mini-section {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+          padding-right: 0;
+          padding-bottom: 16px;
+          margin-bottom: 16px;
+        }
+        .board-wrap {
+          width: 100%;
+        }
+        .sudoku-board {
+          padding: 0px;
+          border-radius: 0px;
+        }
+        .number-pad {
+          gap: 5px;
+        }
+        .num-btn {
+          height: 40px;
+          border-radius: 9px;
+        }
+        .profile-hero {
+          grid-template-columns: auto 1fr;
+          padding: 22px;
+        }
+        .profile-score {
+          grid-column: 1/-1;
+          text-align: left;
+          display: flex;
+          align-items: end;
+          gap: 9px;
+        }
+        .profile-score strong {
+          margin: 0;
+          font-size: 34px;
+        }
+        .profile-score span,
+        .profile-score small {
+          font-size: 7px;
+        }
+        .profile-grid {
+          grid-template-columns: 1fr;
+        }
+        .profile-card.wide,
+        .achievements-card {
+          grid-column: auto;
+        }
+        .mastery-row {
+          grid-template-columns: 130px 1fr 20px;
+        }
+        .achievement-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .footer {
+          padding: 0 16px 20px;
+          flex-direction: column;
+        }
+        .result-actions {
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .game-title-row h2 {
+          font-size: 20px;
+        }
+        .stat-block {
+          min-width: 58px;
+        }
+        .stat-block strong {
+          font-size: 14px;
+        }
+        .mastery-row {
+          grid-template-columns: 110px 1fr 18px;
+          gap: 8px;
+        }
+        .mastery-row small {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <div class="bg-grid"></div>
+      <div class="noise"></div>
+
+      <header class="topbar">
+        <button class="brand" data-view="home" aria-label="Go to home">
+          <span class="brand-mark">S</span>
+          <span>
+            <strong>SUDOKU</strong>
+            <small>Mind Under Pressure</small>
+          </span>
+        </button>
+
+        <nav class="nav-tabs" aria-label="Main navigation">
+          <button class="nav-btn active" data-view="home">Game</button>
+          <button class="nav-btn" data-view="profile">Profile</button>
+        </nav>
+
+        <div class="header-actions">
+          <span id="headerPoints" class="points-chip">0 PTS</span>
+          <button
+            id="resetProfileBtn"
+            class="icon-btn danger"
+            title="Reset profile"
+            aria-label="Reset profile"
+          >
+            ↺
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section id="homeView" class="view active-view">
+          <div class="hero panel">
+            <div class="hero-copy">
+              <span class="eyebrow">LOGIC // PRECISION // FOCUS</span>
+              <h1>Play smart.<br /><em>Finish strong.</em></h1>
+              <p>
+                Three stages. One board. Every completed puzzle earns a point
+                and the next run is freshly generated.
+              </p>
+              <div class="hero-stats">
+                <div>
+                  <strong id="heroCompleted">0</strong
+                  ><span>Puzzles cleared</span>
+                </div>
+                <div>
+                  <strong id="heroStreak">0</strong><span>Current streak</span>
+                </div>
+                <div>
+                  <strong id="heroBest">—</strong><span>Best time</span>
+                </div>
+              </div>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+              <div class="orbit orbit-a"></div>
+              <div class="orbit orbit-b"></div>
+              <div class="hero-sudoku-grid" id="heroSudokuGrid"></div>
+            </div>
+          </div>
+
+          <section class="stage-section">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">SELECT STAGE</span>
+                <h2>Choose your pressure.</h2>
+              </div>
+              <p>
+                Each stage has separate points, best time and puzzle history.
+              </p>
+            </div>
+
+            <div class="stage-grid">
+              <button class="stage-card easy" data-difficulty="easy">
+                <div class="stage-top">
+                  <span class="stage-no">01</span
+                  ><span class="stage-tag">WARM-UP</span>
+                </div>
+                <div class="stage-icon">◌</div>
+                <h3>Easy</h3>
+                <p>More clues. Great for getting into rhythm.</p>
+                <div class="stage-bottom">
+                  <span id="easyPoints">0 pts</span><span>PLAY →</span>
+                </div>
+              </button>
+
+              <button class="stage-card medium" data-difficulty="medium">
+                <div class="stage-top">
+                  <span class="stage-no">02</span
+                  ><span class="stage-tag">FOCUS</span>
+                </div>
+                <div class="stage-icon">◍</div>
+                <h3>Medium</h3>
+                <p>Balanced clues with a little more pressure.</p>
+                <div class="stage-bottom">
+                  <span id="mediumPoints">0 pts</span><span>PLAY →</span>
+                </div>
+              </button>
+
+              <button class="stage-card hard" data-difficulty="hard">
+                <div class="stage-top">
+                  <span class="stage-no">03</span
+                  ><span class="stage-tag">ELITE</span>
+                </div>
+                <div class="stage-icon">●</div>
+                <h3>Hard</h3>
+                <p>Fewer clues. Mistakes hurt. Logic matters.</p>
+                <div class="stage-bottom">
+                  <span id="hardPoints">0 pts</span><span>PLAY →</span>
+                </div>
+              </button>
+            </div>
+          </section>
+
+          <section class="tips panel compact-panel">
+            <div>
+              <span class="eyebrow">HOW IT WORKS</span>
+              <h3>Clear the board to earn +1 point.</h3>
+            </div>
+            <div class="tip-row">
+              <span><b>01</b> Select a stage</span>
+              <span><b>02</b> Fill every row, column & 3×3 box</span>
+              <span><b>03</b> Finish to bank your point</span>
+              <span><b>04</b> Replay = new puzzle</span>
+            </div>
+          </section>
+        </section>
+
+        <section id="gameView" class="view">
+          <div class="game-head panel">
+            <div>
+              <button id="backHomeBtn" class="back-btn">← STAGES</button>
+              <div class="game-title-row">
+                <span id="gameDifficultyTag" class="difficulty-tag">EASY</span>
+                <h2 id="gameTitle">Easy Sudoku</h2>
+              </div>
+              <p id="gameSubtitle">Fresh board. Clean slate.</p>
+            </div>
+            <div class="game-head-actions">
+              <div class="stat-block">
+                <span>TIME</span><strong id="timer">00:00</strong>
+              </div>
+              <div class="stat-block">
+                <span>MISTAKES</span><strong id="mistakes">0 / 3</strong>
+              </div>
+              <button id="pauseBtn" class="action-btn">Ⅱ Pause</button>
+            </div>
+          </div>
+
+          <div class="game-layout">
+            <aside class="side-panel panel">
+              <div class="mini-section">
+                <span class="eyebrow">RUN STATUS</span>
+                <div class="progress-ring-wrap">
+                  <svg
+                    class="progress-ring"
+                    width="120"
+                    height="120"
+                    viewBox="0 0 120 120"
+                  >
+                    <circle class="ring-bg" cx="60" cy="60" r="50" />
+                    <circle
+                      id="ringProgress"
+                      class="ring-progress"
+                      cx="60"
+                      cy="60"
+                      r="50"
+                    />
+                  </svg>
+                  <div class="ring-label">
+                    <strong id="filledCount">0</strong><span>/ 81</span>
+                  </div>
+                </div>
+                <div class="progress-caption">CELLS FILLED</div>
+              </div>
+
+              <div class="mini-section controls-section">
+                <span class="eyebrow">TOOLS</span>
+                <button id="hintBtn" class="tool-btn">
+                  <span>✦</span
+                  ><span><b>Hint</b><small>Reveal one correct cell</small></span
+                  ><kbd id="hintCount">3</kbd>
+                </button>
+                <button id="eraseBtn" class="tool-btn">
+                  <span>⌫</span
+                  ><span><b>Erase</b><small>Remove your number</small></span
+                  ><kbd>⌫</kbd>
+                </button>
+              </div>
+
+              <div class="mini-section rules-section">
+                <span class="eyebrow">RULES</span>
+                <p>
+                  Every row, column and 3×3 box must contain
+                  <strong>1–9 exactly once</strong>.
+                </p>
+              </div>
+            </aside>
+
+            <section class="board-wrap">
+              <div id="pausedOverlay" class="paused-overlay hidden">
+                <div class="paused-card">
+                  <span class="eyebrow">RUN PAUSED</span>
+                  <h3>Take a breath.</h3>
+                  <button id="resumeBtn" class="primary-btn">RESUME RUN</button>
+                </div>
+              </div>
+              <div
+                id="sudokuBoard"
+                class="sudoku-board"
+                role="grid"
+                aria-label="Sudoku board"
+              ></div>
+              <div
+                id="numberPad"
+                class="number-pad"
+                aria-label="Number pad"
+              ></div>
+              <div class="selection-helper">
+                <span>SELECT A CELL</span><span id="selectedCellLabel">—</span>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="profileView" class="view">
+          <div class="profile-hero panel">
+            <div class="profile-avatar" id="profileAvatar">S</div>
+            <div>
+              <span class="eyebrow">PLAYER PROFILE</span>
+              <h1>Logic Runner</h1>
+              <p id="profileRankText">Novice solver • keep going</p>
+            </div>
+            <div class="profile-score">
+              <span>TOTAL SCORE</span>
+              <strong id="profileTotalPoints">0</strong>
+              <small>points earned</small>
+            </div>
+          </div>
+
+          <div class="profile-grid">
+            <section class="panel profile-card wide">
+              <div class="card-heading">
+                <div>
+                  <span class="eyebrow">STAGE MASTERY</span>
+                  <h2>Your record.</h2>
+                </div>
+              </div>
+              <div class="mastery-list">
+                <div class="mastery-row">
+                  <div>
+                    <span class="mastery-dot easy-dot"></span
+                    ><strong>Easy</strong
+                    ><small id="easyMeta">0 clears · best —</small>
+                  </div>
+                  <div class="mastery-bar"><i id="easyBar"></i></div>
+                  <b id="easyProfilePoints">0</b>
+                </div>
+                <div class="mastery-row">
+                  <div>
+                    <span class="mastery-dot medium-dot"></span
+                    ><strong>Medium</strong
+                    ><small id="mediumMeta">0 clears · best —</small>
+                  </div>
+                  <div class="mastery-bar"><i id="mediumBar"></i></div>
+                  <b id="mediumProfilePoints">0</b>
+                </div>
+                <div class="mastery-row">
+                  <div>
+                    <span class="mastery-dot hard-dot"></span
+                    ><strong>Hard</strong
+                    ><small id="hardMeta">0 clears · best —</small>
+                  </div>
+                  <div class="mastery-bar"><i id="hardBar"></i></div>
+                  <b id="hardProfilePoints">0</b>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel profile-card">
+              <span class="eyebrow">LIFETIME</span>
+              <h2>Numbers.</h2>
+              <div class="number-stats">
+                <div>
+                  <strong id="statCompleted">0</strong><span>Completed</span>
+                </div>
+                <div>
+                  <strong id="statPerfect">0</strong><span>Perfect runs</span>
+                </div>
+                <div>
+                  <strong id="statHints">0</strong><span>Hints used</span>
+                </div>
+                <div>
+                  <strong id="statMistakes">0</strong><span>Mistakes</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel profile-card">
+              <span class="eyebrow">SPEED</span>
+              <h2>Best times.</h2>
+              <div class="time-list">
+                <div><span>Easy</span><strong id="bestEasy">—</strong></div>
+                <div><span>Medium</span><strong id="bestMedium">—</strong></div>
+                <div><span>Hard</span><strong id="bestHard">—</strong></div>
+                <div>
+                  <span>Overall</span><strong id="bestOverall">—</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel profile-card achievements-card">
+              <div class="card-heading">
+                <div>
+                  <span class="eyebrow">ACHIEVEMENTS</span>
+                  <h2>Unlocked.</h2>
+                </div>
+                <span id="achievementCount" class="muted-count">0 / 8</span>
+              </div>
+              <div id="achievementGrid" class="achievement-grid"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>SUDOKU // LOCAL GAME DATA</span>
+        <span id="footerSaveStatus">Progress saved automatically</span>
+      </footer>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+      <div id="resultModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="result-card">
+          <span id="resultEyebrow" class="eyebrow">STAGE CLEARED</span>
+          <div class="result-icon">✓</div>
+          <h2 id="resultTitle">Clean finish.</h2>
+          <p id="resultText">You cleared the board.</p>
+          <div class="result-stats">
+            <div><span>TIME</span><strong id="resultTime">00:00</strong></div>
+            <div>
+              <span>MISTAKES</span><strong id="resultMistakes">0</strong>
+            </div>
+            <div><span>POINT</span><strong>+1</strong></div>
+          </div>
+          <div class="result-actions">
+            <button id="resultReplayBtn" class="primary-btn">NEW PUZZLE</button>
+            <button id="resultProfileBtn" class="secondary-btn">
+              VIEW PROFILE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="confirmModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="confirm-card">
+          <span class="eyebrow">RESET PROFILE</span>
+          <h2>Erase your progress?</h2>
+          <p>
+            This removes points, records, achievements and puzzle history from
+            this browser.
+          </p>
+          <div class="result-actions">
+            <button id="cancelResetBtn" class="secondary-btn">CANCEL</button
+            ><button id="confirmResetBtn" class="danger-btn">
+              RESET EVERYTHING
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const STORAGE_KEY = "standalone-sudoku-v1";
+        const DIFFICULTIES = {
+          easy: { label: "Easy", tag: "WARM-UP", holes: 40 },
+          medium: { label: "Medium", tag: "FOCUS", holes: 48 },
+          hard: { label: "Hard", tag: "ELITE", holes: 55 },
+        };
+
+        const ACHIEVEMENTS = [
+          {
+            id: "first",
+            icon: "◈",
+            name: "First Clear",
+            desc: "Complete your first puzzle.",
+            test: (s) => s.totalCompleted >= 1,
+          },
+          {
+            id: "five",
+            icon: "◆",
+            name: "On A Roll",
+            desc: "Complete 5 puzzles.",
+            test: (s) => s.totalCompleted >= 5,
+          },
+          {
+            id: "each",
+            icon: "◇",
+            name: "Triple Threat",
+            desc: "Clear Easy, Medium and Hard.",
+            test: (s) => Object.values(s.stages).every((x) => x.points >= 1),
+          },
+          {
+            id: "perfect",
+            icon: "✦",
+            name: "Perfect Run",
+            desc: "Finish with zero mistakes.",
+            test: (s) => s.perfectRuns >= 1,
+          },
+          {
+            id: "nohint",
+            icon: "✧",
+            name: "Pure Logic",
+            desc: "Finish a run without hints.",
+            test: (s) => s.noHintWins >= 1,
+          },
+          {
+            id: "streak3",
+            icon: "⚡",
+            name: "Three Strong",
+            desc: "Build a 3-game streak.",
+            test: (s) => s.bestStreak >= 3,
+          },
+          {
+            id: "hard",
+            icon: "⬢",
+            name: "Pressure Proof",
+            desc: "Clear Hard.",
+            test: (s) => s.stages.hard.points >= 1,
+          },
+          {
+            id: "speed",
+            icon: "⌁",
+            name: "Sharp Mind",
+            desc: "Finish any puzzle under 5 minutes.",
+            test: (s) => s.fastestTime !== null && s.fastestTime < 300,
+          },
+        ];
+
+        const state = loadState();
+        let game = null;
+        let toastTimer = null;
+
+        const $ = (id) => document.getElementById(id);
+        const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+        function defaultState() {
+          return {
+            totalPoints: 0,
+            totalCompleted: 0,
+            perfectRuns: 0,
+            noHintWins: 0,
+            totalHints: 0,
+            totalMistakes: 0,
+            currentStreak: 0,
+            bestStreak: 0,
+            fastestTime: null,
+            achievements: [],
+            stages: {
+              easy: {
+                points: 0,
+                completed: 0,
+                bestTime: null,
+                usedPuzzles: [],
+              },
+              medium: {
+                points: 0,
+                completed: 0,
+                bestTime: null,
+                usedPuzzles: [],
+              },
+              hard: {
+                points: 0,
+                completed: 0,
+                bestTime: null,
+                usedPuzzles: [],
+              },
+            },
+          };
+        }
+
+        function loadState() {
+          try {
+            const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            if (!raw) return defaultState();
+            const base = defaultState();
+            return {
+              ...base,
+              ...raw,
+              stages: {
+                easy: { ...base.stages.easy, ...(raw.stages?.easy || {}) },
+                medium: {
+                  ...base.stages.medium,
+                  ...(raw.stages?.medium || {}),
+                },
+                hard: { ...base.stages.hard, ...(raw.stages?.hard || {}) },
+              },
+            };
+          } catch (error) {
+            console.warn("Could not load profile:", error);
+            return defaultState();
+          }
+        }
+
+        function saveState() {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          $("footerSaveStatus").textContent = "Progress saved automatically";
+        }
+
+        function seededRandom(seed) {
+          let t = seed >>> 0;
+          return () => {
+            t += 0x6d2b79f5;
+            let r = Math.imul(t ^ (t >>> 15), 1 | t);
+            r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+            return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+
+        function randomInt(max, rng = Math.random) {
+          return Math.floor(rng() * max);
+        }
+
+        function shuffle(array, rng = Math.random) {
+          const copy = array.slice();
+          for (let i = copy.length - 1; i > 0; i--) {
+            const j = randomInt(i + 1, rng);
+            [copy[i], copy[j]] = [copy[j], copy[i]];
+          }
+          return copy;
+        }
+
+        function generateSolvedGrid(rng = Math.random) {
+          const basePattern = (r, c) => (r * 3 + Math.floor(r / 3) + c) % 9;
+          const rowGroups = shuffle([0, 1, 2], rng);
+          const rows = rowGroups.flatMap((g) =>
+            shuffle([0, 1, 2], rng).map((r) => g * 3 + r),
+          );
+          const colGroups = shuffle([0, 1, 2], rng);
+          const cols = colGroups.flatMap((g) =>
+            shuffle([0, 1, 2], rng).map((c) => g * 3 + c),
+          );
+          const nums = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9], rng);
+          const grid = Array.from({ length: 81 }, () => 0);
+          for (let r = 0; r < 9; r++) {
+            for (let c = 0; c < 9; c++) {
+              grid[r * 9 + c] = nums[basePattern(rows[r], cols[c])];
+            }
+          }
+          return grid;
+        }
+
+        function countSolutions(board, limit = 2) {
+          const grid = board.slice();
+          let count = 0;
+
+          function search() {
+            if (count >= limit) return;
+            let best = -1;
+            let bestCandidates = null;
+            let bestCount = 10;
+
+            for (let i = 0; i < 81; i++) {
+              if (grid[i] !== 0) continue;
+              const r = Math.floor(i / 9),
+                c = i % 9;
+              const used = new Set();
+              for (let k = 0; k < 9; k++) {
+                used.add(grid[r * 9 + k]);
+                used.add(grid[k * 9 + c]);
+              }
+              const br = Math.floor(r / 3) * 3,
+                bc = Math.floor(c / 3) * 3;
+              for (let rr = br; rr < br + 3; rr++)
+                for (let cc = bc; cc < bc + 3; cc++)
+                  used.add(grid[rr * 9 + cc]);
+              const candidates = [];
+              for (let n = 1; n <= 9; n++) if (!used.has(n)) candidates.push(n);
+              if (!candidates.length) return;
+              if (candidates.length < bestCount) {
+                bestCount = candidates.length;
+                best = i;
+                bestCandidates = candidates;
+                if (bestCount === 1) break;
+              }
+            }
+
+            if (best === -1) {
+              count++;
+              return;
+            }
+
+            const r = Math.floor(best / 9),
+              c = best % 9;
+            const br = Math.floor(r / 3) * 3,
+              bc = Math.floor(c / 3) * 3;
+            for (const n of bestCandidates) {
+              let valid = true;
+              for (let k = 0; k < 9; k++) {
+                if (grid[r * 9 + k] === n || grid[k * 9 + c] === n) {
+                  valid = false;
+                  break;
+                }
+              }
+              if (valid) {
+                for (let rr = br; rr < br + 3 && valid; rr++) {
+                  for (let cc = bc; cc < bc + 3; cc++)
+                    if (grid[rr * 9 + cc] === n) {
+                      valid = false;
+                      break;
+                    }
+                }
+              }
+              if (!valid) continue;
+              grid[best] = n;
+              search();
+              grid[best] = 0;
+              if (count >= limit) return;
+            }
+          }
+
+          search();
+          return count;
+        }
+
+        function createPuzzle(difficulty) {
+          const config = DIFFICULTIES[difficulty];
+          const stage = state.stages[difficulty];
+          const seen = new Set(stage.usedPuzzles || []);
+
+          for (let attempt = 0; attempt < 30; attempt++) {
+            const seed =
+              (Date.now() +
+                Math.floor(Math.random() * 1e9) +
+                attempt * 9973) >>>
+              0;
+            const rng = seededRandom(seed);
+            const solution = generateSolvedGrid(rng);
+            const puzzle = solution.slice();
+            const cells = shuffle(
+              Array.from({ length: 81 }, (_, i) => i),
+              rng,
+            );
+            let removed = 0;
+
+            for (const index of cells) {
+              if (removed >= config.holes) break;
+              const backup = puzzle[index];
+              puzzle[index] = 0;
+              if (countSolutions(puzzle, 2) === 1) {
+                removed++;
+              } else {
+                puzzle[index] = backup;
+              }
+            }
+
+            const signature = puzzle.map((n) => n || 0).join("");
+            if (!seen.has(signature) && removed >= config.holes - 2) {
+              stage.usedPuzzles.push(signature);
+              if (stage.usedPuzzles.length > 100) stage.usedPuzzles.shift();
+              saveState();
+              return { puzzle, solution, signature };
+            }
+          }
+
+          const solution = generateSolvedGrid();
+          const puzzle = solution.slice();
+          const indices = shuffle(Array.from({ length: 81 }, (_, i) => i));
+          for (let i = 0; i < config.holes; i++) puzzle[indices[i]] = 0;
+          const signature = puzzle.join("");
+          stage.usedPuzzles.push(signature);
+          if (stage.usedPuzzles.length > 100) stage.usedPuzzles.shift();
+          saveState();
+          return { puzzle, solution, signature };
+        }
+
+        function createHeroGrid() {
+          const values = generateSolvedGrid((seed) => Math.random());
+          const grid = $("heroSudokuGrid");
+          grid.innerHTML = "";
+          values.forEach((n, i) => {
+            const span = document.createElement("span");
+            span.textContent = (i + 5) % 4 === 0 ? "" : n;
+            grid.appendChild(span);
+          });
+        }
+
+        function showView(viewName) {
+          $$(".view").forEach((v) => v.classList.remove("active-view"));
+          $(viewName + "View").classList.add("active-view");
+          $$(".nav-btn").forEach((btn) =>
+            btn.classList.toggle(
+              "active",
+              btn.dataset.view === viewName ||
+                (viewName === "game" && btn.dataset.view === "home"),
+            ),
+          );
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function formatTime(seconds) {
+          seconds = Math.max(0, Math.floor(seconds));
+          const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+          const s = String(seconds % 60).padStart(2, "0");
+          return `${m}:${s}`;
+        }
+
+        function startGame(difficulty) {
+          const puzzleData = createPuzzle(difficulty);
+          game = {
+            difficulty,
+            puzzle: puzzleData.puzzle,
+            solution: puzzleData.solution,
+            signature: puzzleData.signature,
+            values: puzzleData.puzzle.slice(),
+            given: puzzleData.puzzle.map((v) => v !== 0),
+            selected: null,
+            mistakes: 0,
+            hints: 0,
+            elapsed: 0,
+            startedAt: performance.now(),
+            pausedAt: null,
+            paused: false,
+            over: false,
+          };
+
+          $("gameDifficultyTag").textContent =
+            DIFFICULTIES[difficulty].label.toUpperCase();
+          $("gameTitle").textContent =
+            `${DIFFICULTIES[difficulty].label} Sudoku`;
+          $("gameSubtitle").textContent =
+            `Puzzle ${state.stages[difficulty].completed + 1} • Fresh board generated for this run.`;
+          $("hintCount").textContent = "3";
+          $("mistakes").textContent = "0 / 3";
+          $("timer").textContent = "00:00";
+          $("pausedOverlay").classList.add("hidden");
+          $("selectedCellLabel").textContent = "—";
+          $("resultModal").classList.add("hidden");
+          showView("game");
+          renderBoard();
+          renderNumberPad();
+          updateProgress();
+          clearTimer();
+          game.startedAt = performance.now();
+          game.interval = setInterval(tick, 250);
+        }
+
+        function clearTimer() {
+          if (game?.interval) clearInterval(game.interval);
+        }
+
+        function tick() {
+          if (!game || game.paused || game.over) return;
+          game.elapsed = Math.floor(
+            (performance.now() - game.startedAt) / 1000,
+          );
+          $("timer").textContent = formatTime(game.elapsed);
+        }
+
+        function renderBoard() {
+          const board = $("sudokuBoard");
+          board.innerHTML = "";
+          game.values.forEach((value, i) => {
+            const cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "sudoku-cell";
+            cell.dataset.index = i;
+            cell.setAttribute("role", "gridcell");
+            cell.setAttribute(
+              "aria-label",
+              `Row ${Math.floor(i / 9) + 1}, Column ${(i % 9) + 1}${value ? `, ${value}` : ", empty"}`,
+            );
+            if (game.given[i]) cell.classList.add("given");
+            else if (value) cell.classList.add("user");
+            if (game.selected === i) cell.classList.add("selected");
+
+            if (game.selected !== null) {
+              const sr = Math.floor(game.selected / 9),
+                sc = game.selected % 9;
+              const r = Math.floor(i / 9),
+                c = i % 9;
+              if (
+                i !== game.selected &&
+                (r === sr ||
+                  c === sc ||
+                  (Math.floor(r / 3) === Math.floor(sr / 3) &&
+                    Math.floor(c / 3) === Math.floor(sc / 3)))
+              )
+                cell.classList.add("peer");
+              if (value && game.values[game.selected] === value)
+                cell.classList.add("same-number");
+            }
+
+            cell.textContent = value || "";
+            cell.addEventListener("click", () => selectCell(i));
+            board.appendChild(cell);
+          });
+        }
+
+        function selectCell(index) {
+          if (!game || game.over || game.paused) return;
+          game.selected = index;
+          $("selectedCellLabel").textContent =
+            `R${Math.floor(index / 9) + 1} • C${(index % 9) + 1}`;
+          renderBoard();
+          renderNumberPad();
+        }
+
+        function isRowColBoxValid(index, number) {
+          const r = Math.floor(index / 9),
+            c = index % 9;
+          for (let k = 0; k < 9; k++) {
+            if (k !== c && game.values[r * 9 + k] === number) return false;
+            if (k !== r && game.values[k * 9 + c] === number) return false;
+          }
+          const br = Math.floor(r / 3) * 3,
+            bc = Math.floor(c / 3) * 3;
+          for (let rr = br; rr < br + 3; rr++)
+            for (let cc = bc; cc < bc + 3; cc++) {
+              const pos = rr * 9 + cc;
+              if (pos !== index && game.values[pos] === number) return false;
+            }
+          return true;
+        }
+
+        function placeNumber(number) {
+          if (!game || game.over || game.paused || game.selected === null) {
+            if (game?.selected === null) toast("Select a cell first.");
+            return;
+          }
+          const i = game.selected;
+          if (game.given[i]) {
+            toast("That cell is part of the original puzzle.");
+            return;
+          }
+
+          if (game.solution[i] !== number) {
+            game.mistakes += 1;
+            state.totalMistakes += 1;
+            $("mistakes").textContent = `${game.mistakes} / 3`;
+            const cell = $("sudokuBoard").children[i];
+            cell?.classList.add("error");
+            navigator.vibrate?.([30, 30, 30]);
+            if (game.mistakes >= 3) {
+              toast("Three mistakes. Run failed.");
+              setTimeout(() => failGame(), 240);
+            } else {
+              toast(
+                `Not quite. ${3 - game.mistakes} mistake${3 - game.mistakes === 1 ? "" : "s"} left.`,
+              );
+            }
+            saveState();
+            return;
+          }
+
+          if (!isRowColBoxValid(i, number)) {
+            toast("That number conflicts with the board.");
+            return;
+          }
+
+          game.values[i] = number;
+          renderBoard();
+          renderNumberPad();
+          updateProgress();
+
+          if (game.values.every((v, idx) => v === game.solution[idx])) {
+            finishGame();
+          }
+        }
+
+        function eraseSelected() {
+          if (!game || game.over || game.paused || game.selected === null)
+            return;
+          if (game.given[game.selected]) {
+            toast("Original clue cannot be erased.");
+            return;
+          }
+          game.values[game.selected] = 0;
+          renderBoard();
+          renderNumberPad();
+          updateProgress();
+        }
+
+        function useHint() {
+          if (!game || game.over || game.paused) return;
+          if (game.hints >= 3) {
+            toast("No hints left for this run.");
+            return;
+          }
+          if (game.selected === null || game.given[game.selected]) {
+            const empty = game.values
+              .map((v, i) => (v === 0 ? i : -1))
+              .filter((i) => i >= 0);
+            if (!empty.length) return;
+            game.selected = empty[randomInt(empty.length)];
+          }
+          const i = game.selected;
+          if (game.values[i] !== 0) {
+            toast("Select an empty cell for the hint.");
+            return;
+          }
+          game.values[i] = game.solution[i];
+          game.hints += 1;
+          state.totalHints += 1;
+          $("hintCount").textContent = String(3 - game.hints);
+          renderBoard();
+          renderNumberPad();
+          updateProgress();
+          toast(`Hint used. ${3 - game.hints} left.`);
+          saveState();
+          if (game.values.every((v, idx) => v === game.solution[idx]))
+            finishGame();
+        }
+
+        function renderNumberPad() {
+          const pad = $("numberPad");
+          pad.innerHTML = "";
+          for (let n = 1; n <= 9; n++) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "num-btn";
+            btn.textContent = n;
+            const selected = game?.selected;
+            const available =
+              selected !== null &&
+              selected !== undefined &&
+              !game?.given[selected];
+            if (!available) btn.classList.add("disabled");
+            btn.addEventListener("click", () => placeNumber(n));
+            pad.appendChild(btn);
+          }
+        }
+
+        function updateProgress() {
+          if (!game) return;
+          const filled = game.values.filter(Boolean).length;
+          $("filledCount").textContent = String(filled);
+          const progress = filled / 81;
+          $("ringProgress").style.strokeDashoffset = String(
+            314.159 * (1 - progress),
+          );
+        }
+
+        function finishGame() {
+          if (!game || game.over) return;
+          tick();
+          game.over = true;
+          clearTimer();
+          const d = state.stages[game.difficulty];
+          d.points += 1;
+          d.completed += 1;
+          if (d.bestTime === null || game.elapsed < d.bestTime)
+            d.bestTime = game.elapsed;
+          state.totalPoints += 1;
+          state.totalCompleted += 1;
+          if (game.mistakes === 0) state.perfectRuns += 1;
+          if (game.hints === 0) state.noHintWins += 1;
+          if (state.fastestTime === null || game.elapsed < state.fastestTime)
+            state.fastestTime = game.elapsed;
+          state.currentStreak += 1;
+          state.bestStreak = Math.max(state.bestStreak, state.currentStreak);
+          updateAchievements();
+          saveState();
+          refreshUI();
+
+          $("resultTime").textContent = formatTime(game.elapsed);
+          $("resultMistakes").textContent = String(game.mistakes);
+          $("resultTitle").textContent =
+            game.mistakes === 0 ? "Clean finish." : "Stage cleared.";
+          $("resultText").textContent =
+            game.hints === 0
+              ? "Perfect logic. No hints needed."
+              : "Board cleared. Your point is banked.";
+          $("resultModal").classList.remove("hidden");
+        }
+
+        function failGame() {
+          if (!game || game.over) return;
+          game.over = true;
+          clearTimer();
+          state.currentStreak = 0;
+          saveState();
+          refreshUI();
+          $("resultEyebrow").textContent = "RUN FAILED";
+          $("resultIcon").textContent = "×";
+          $("resultIcon").style.color = "var(--hard)";
+          $("resultIcon").style.borderColor = "rgba(255,122,122,.35)";
+          $("resultIcon").style.background = "rgba(255,122,122,.08)";
+          $("resultTitle").textContent = "Pressure won this round.";
+          $("resultText").textContent =
+            "No point this time. Start a new puzzle and go again.";
+          $("resultTime").textContent = formatTime(game.elapsed);
+          $("resultMistakes").textContent = String(game.mistakes);
+          $("resultReplayBtn").textContent = "TRY AGAIN";
+          $("resultModal").classList.remove("hidden");
+        }
+
+        function pauseGame() {
+          if (!game || game.over) return;
+          game.paused = !game.paused;
+          $("pausedOverlay").classList.toggle("hidden", !game.paused);
+          $("pauseBtn").textContent = game.paused ? "▶ Resume" : "Ⅱ Pause";
+          if (!game.paused) {
+            // Keep elapsed time frozen while paused.
+            game.startedAt = performance.now() - game.elapsed * 1000;
+          }
+        }
+
+        function updateAchievements() {
+          const unlocked = ACHIEVEMENTS.filter((a) => a.test(state)).map(
+            (a) => a.id,
+          );
+          state.achievements = unlocked;
+        }
+
+        function rankForPoints(points) {
+          if (points >= 15) return "Grandmaster solver";
+          if (points >= 10) return "Elite solver";
+          if (points >= 5) return "Skilled solver";
+          if (points >= 2) return "Rising solver";
+          return "Novice solver";
+        }
+
+        function refreshUI() {
+          $("headerPoints").textContent = `${state.totalPoints} PTS`;
+          $("heroCompleted").textContent = state.totalCompleted;
+          $("heroStreak").textContent = state.currentStreak;
+          $("heroBest").textContent =
+            state.fastestTime === null ? "—" : formatTime(state.fastestTime);
+          $("easyPoints").textContent = `${state.stages.easy.points} pts`;
+          $("mediumPoints").textContent = `${state.stages.medium.points} pts`;
+          $("hardPoints").textContent = `${state.stages.hard.points} pts`;
+
+          $("profileTotalPoints").textContent = state.totalPoints;
+          $("profileRankText").textContent =
+            `${rankForPoints(state.totalPoints)} • ${state.currentStreak} current streak • ${state.bestStreak} best`;
+          $("profileAvatar").textContent = String(state.totalPoints % 10);
+
+          for (const key of ["easy", "medium", "hard"]) {
+            const s = state.stages[key];
+            $(`${key}Meta`).textContent =
+              `${s.completed} clear${s.completed === 1 ? "" : "s"} · best ${s.bestTime === null ? "—" : formatTime(s.bestTime)}`;
+            $(`${key}ProfilePoints`).textContent = s.points;
+            $(`${key}Bar`).style.width = `${Math.min(100, s.points * 10)}%`;
+          }
+
+          $("statCompleted").textContent = state.totalCompleted;
+          $("statPerfect").textContent = state.perfectRuns;
+          $("statHints").textContent = state.totalHints;
+          $("statMistakes").textContent = state.totalMistakes;
+          $("bestEasy").textContent =
+            state.stages.easy.bestTime === null
+              ? "—"
+              : formatTime(state.stages.easy.bestTime);
+          $("bestMedium").textContent =
+            state.stages.medium.bestTime === null
+              ? "—"
+              : formatTime(state.stages.medium.bestTime);
+          $("bestHard").textContent =
+            state.stages.hard.bestTime === null
+              ? "—"
+              : formatTime(state.stages.hard.bestTime);
+          $("bestOverall").textContent =
+            state.fastestTime === null ? "—" : formatTime(state.fastestTime);
+
+          renderAchievements();
+        }
+
+        function renderAchievements() {
+          const grid = $("achievementGrid");
+          grid.innerHTML = "";
+          let count = 0;
+          for (const a of ACHIEVEMENTS) {
+            const unlocked = state.achievements.includes(a.id);
+            if (unlocked) count++;
+            const card = document.createElement("article");
+            card.className = `achievement ${unlocked ? "unlocked" : ""}`;
+            card.innerHTML = `<div class="achievement-icon">${a.icon}</div><strong>${a.name}</strong><p>${a.desc}</p>`;
+            grid.appendChild(card);
+          }
+          $("achievementCount").textContent =
+            `${count} / ${ACHIEVEMENTS.length}`;
+        }
+
+        function closeResultModal() {
+          $("resultModal").classList.add("hidden");
+          $("resultIcon").textContent = "✓";
+          $("resultIcon").style.color = "var(--easy)";
+          $("resultIcon").style.borderColor = "rgba(129,220,168,.34)";
+          $("resultIcon").style.background = "rgba(129,220,168,.1)";
+          $("resultEyebrow").textContent = "STAGE CLEARED";
+        }
+
+        function toast(message) {
+          const el = $("toast");
+          el.textContent = message;
+          el.classList.add("show");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => el.classList.remove("show"), 1900);
+        }
+
+        function resetProfile() {
+          localStorage.removeItem(STORAGE_KEY);
+          Object.assign(state, defaultState());
+          updateAchievements();
+          saveState();
+          game = null;
+          clearTimer();
+          $("confirmModal").classList.add("hidden");
+          $("resultModal").classList.add("hidden");
+          showView("home");
+          refreshUI();
+          toast("Profile reset. Fresh start.");
+        }
+
+        document.addEventListener("click", (event) => {
+          const viewBtn = event.target.closest("[data-view]");
+          if (viewBtn) {
+            const target = viewBtn.dataset.view;
+            if (target === "home") {
+              if (game && !game.over) {
+                // Going home does not erase the active run, but stops displaying it.
+                clearTimer();
+              }
+              showView("home");
+            } else if (target === "profile") {
+              if (game && !game.over) clearTimer();
+              refreshUI();
+              showView("profile");
+            }
+          }
+
+          const stage = event.target.closest("[data-difficulty]");
+          if (stage) startGame(stage.dataset.difficulty);
+        });
+
+        $("backHomeBtn").addEventListener("click", () => {
+          if (game && !game.over) {
+            clearTimer();
+            game.paused = true;
+          }
+          showView("home");
+        });
+        $("pauseBtn").addEventListener("click", pauseGame);
+        $("resumeBtn").addEventListener("click", pauseGame);
+        $("hintBtn").addEventListener("click", useHint);
+        $("eraseBtn").addEventListener("click", eraseSelected);
+
+        $("resultReplayBtn").addEventListener("click", () => {
+          closeResultModal();
+          startGame(game.difficulty);
+        });
+        $("resultProfileBtn").addEventListener("click", () => {
+          closeResultModal();
+          clearTimer();
+          refreshUI();
+          showView("profile");
+        });
+
+        $("resetProfileBtn").addEventListener("click", () =>
+          $("confirmModal").classList.remove("hidden"),
+        );
+        $("cancelResetBtn").addEventListener("click", () =>
+          $("confirmModal").classList.add("hidden"),
+        );
+        $("confirmResetBtn").addEventListener("click", resetProfile);
+
+        document.addEventListener("keydown", (event) => {
+          if (
+            !game ||
+            !["gameView"].includes(
+              $$(".view").find((v) => v.classList.contains("active-view"))?.id,
+            )
+          )
+            return;
+          if (event.key >= "1" && event.key <= "9")
+            placeNumber(Number(event.key));
+          if (
+            event.key === "Backspace" ||
+            event.key === "Delete" ||
+            event.key === "0"
+          )
+            eraseSelected();
+          if (event.key.toLowerCase() === "h") useHint();
+          if (event.key.toLowerCase() === "p") pauseGame();
+          if (event.key === "ArrowUp" && game.selected !== null)
+            selectCell(Math.max(0, game.selected - 9));
+          if (event.key === "ArrowDown" && game.selected !== null)
+            selectCell(Math.min(80, game.selected + 9));
+          if (event.key === "ArrowLeft" && game.selected !== null)
+            selectCell(
+              game.selected % 9 === 0 ? game.selected : game.selected - 1,
+            );
+          if (event.key === "ArrowRight" && game.selected !== null)
+            selectCell(
+              game.selected % 9 === 8 ? game.selected : game.selected + 1,
+            );
+        });
+
+        window.addEventListener("beforeunload", saveState);
+
+        updateAchievements();
+        createHeroGrid();
+        refreshUI();
+      })();
+    </script>
+  </body>
+</html>
