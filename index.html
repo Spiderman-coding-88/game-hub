@@ -61,12 +61,12 @@
     <section id="playerView" class="player-view" hidden aria-label="Game player">
       <iframe id="gameFrame" title="Selected game" allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write" allowfullscreen></iframe>
       <div id="exitHandle" class="exit-handle" role="button" tabindex="0"
-           aria-label="Tap twice to return to the game lobby"
-           title="Tap twice to return to lobby">
+           aria-label="Tap to show the home button"
+           title="Tap to show home button">
         <span class="handle-curve"></span>
         <span class="handle-symbol" aria-hidden="true">↖</span>
       </div>
-      <div id="exitHint" class="exit-hint" aria-hidden="true"><span class="desktop-exit-hint">DOUBLE-CLICK TO EXIT</span><span class="mobile-exit-hint">TAP TWICE TO EXIT</span></div>
+      <button id="homeButton" class="home-button" type="button" hidden>← HOME</button>
       <div id="playerLoading" class="player-loading" hidden><span class="loading-spinner"></span><p>LOADING GAME...</p></div>
       <div id="playerError" class="player-error" hidden>
         <div class="error-mark">!</div><h2>GAME COULDN'T LOAD</h2>
