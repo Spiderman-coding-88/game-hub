@@ -216,13 +216,16 @@ addEventListener('keydown',e=>{
   else if(k==='ArrowUp'||k==='w'||k==='W'||k===' ')jump();
   else if(k==='ArrowDown'||k==='s'||k==='S')slide();
 });
+
+/* One action per swipe: after a swipe triggers a move, ignore the rest of
+   that touch until the finger is lifted (moved is reset on touchstart). */
 let sx=0,sy=0,moved=false;
 addEventListener('touchstart',e=>{if(e.target.closest('button'))return;const t=e.changedTouches[0];sx=t.clientX;sy=t.clientY;moved=false},{passive:true});
 addEventListener('touchmove',e=>{
-  if(st!==S.PLAY||e.target.closest('button'))return;
+  if(st!==S.PLAY||moved||e.target.closest('button'))return;
   const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
-  if(Math.abs(dx)>26&&Math.abs(dx)>Math.abs(dy)){moveLane(dx>0?1:-1);sx=t.clientX;sy=t.clientY;moved=true}
-  else if(Math.abs(dy)>32&&Math.abs(dy)>Math.abs(dx)){dy<0?jump():slide();sx=t.clientX;sy=t.clientY;moved=true}
+  if(Math.abs(dx)>26&&Math.abs(dx)>Math.abs(dy)){moveLane(dx>0?1:-1);moved=true}
+  else if(Math.abs(dy)>32&&Math.abs(dy)>Math.abs(dx)){dy<0?jump():slide();moved=true}
 },{passive:true});
 addEventListener('touchend',e=>{if(st===S.PLAY&&!moved&&!e.target.closest('button'))jump()},{passive:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&st===S.PLAY)togglePause()});
