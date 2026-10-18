@@ -120,6 +120,7 @@ const searchInput = document.getElementById("searchInput");
 const emptyState = document.getElementById("emptyState");
 const gameFrame = document.getElementById("gameFrame");
 const exitHandle = document.getElementById("exitHandle");
+const homeButton = document.getElementById("homeButton");
 const playerLoading = document.getElementById("playerLoading");
 const playerError = document.getElementById("playerError");
 const errorBackButton = document.getElementById("errorBackButton");
@@ -173,6 +174,7 @@ function launchGame(game) {
   if (!game || !game.file) return;
 
   activeGame = game;
+  hideHomeButton();
   playerError.hidden = true;
   playerLoading.hidden = false;
   lobbyView.hidden = true;
@@ -212,6 +214,7 @@ function returnToLobby() {
   if (playerView.hidden) return;
   const previousGameName = activeGame?.name || "";
 
+  hideHomeButton();
   clearTimeout(loadingTimer);
   clearTimeout(frameLoadTimeout);
   gameFrame.onload = null;
@@ -236,42 +239,36 @@ function returnToLobby() {
   if (focusCard) focusCard.focus();
 }
 
-function exitPlayerSafely() {
-  // Double-click is the primary exit gesture. Keyboard users can focus the handle
-  // and press Enter or Space twice, matching the double-activation requirement.
-  returnToLobby();
+let homeButtonTimer = null;
+
+function showHomeButton() {
+  homeButton.hidden = false;
+  clearTimeout(homeButtonTimer);
+  // Hide again after a few seconds if the player doesn't use it.
+  homeButtonTimer = setTimeout(hideHomeButton, 4000);
 }
 
-// Desktop: double-click. Touch screens: tap the corner handle twice quickly.
-exitHandle.addEventListener("dblclick", (event) => {
+function hideHomeButton() {
+  clearTimeout(homeButtonTimer);
+  homeButton.hidden = true;
+}
+
+// Tap (or click / Enter / Space) on the top-left corner reveals the Home button.
+exitHandle.addEventListener("click", (event) => {
   event.preventDefault();
-  exitPlayerSafely();
+  showHomeButton();
 });
-
-let lastTouchActivation = 0;
-exitHandle.addEventListener("pointerup", (event) => {
-  if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
-  const now = Date.now();
-  if (now - lastTouchActivation < 550) {
-    event.preventDefault();
-    lastTouchActivation = 0;
-    exitPlayerSafely();
-  } else {
-    lastTouchActivation = now;
-  }
-});
-
-let lastKeyboardActivation = 0;
 exitHandle.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
   event.preventDefault();
-  const now = Date.now();
-  if (now - lastKeyboardActivation < 500) {
-    exitPlayerSafely();
-    lastKeyboardActivation = 0;
-  } else {
-    lastKeyboardActivation = now;
-  }
+  showHomeButton();
+  homeButton.focus();
+});
+
+// Pressing the revealed button goes back to the lobby.
+homeButton.addEventListener("click", () => {
+  hideHomeButton();
+  returnToLobby();
 });
 
 errorBackButton.addEventListener("click", returnToLobby);
