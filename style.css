@@ -288,3 +288,23 @@ button, input, [role="button"] {
   .library-section { padding-top: 17px; }
   .player-view { padding-top: 0; padding-bottom: 0; }
 }
+
+
+/* Home button revealed by tapping the top-left corner */
+.home-button {
+  position: absolute; z-index: 106;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  padding: 12px 18px; min-height: 44px;
+  background: #0b0e15ee; color: #c8ff3d;
+  border: 1px solid rgba(200,255,61,.55); border-radius: 999px;
+  font: 700 12px var(--mono); letter-spacing: 1.5px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  animation: homeButtonIn .18s ease-out;
+}
+.home-button[hidden] { display: none; }
+.home-button:active { background: #c8ff3d; color: #080b12; }
+@keyframes homeButtonIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+/* the old double-tap hint is no longer used */
+.exit-hint { display: none !important; }
