@@ -14,7 +14,7 @@ Opening `index.html` directly with `file://` may work in some browsers, but a lo
 1. Copy your game's HTML file and its asset folders into `games/` (or another folder in this project).
 2. Open `app.js` and add an object to `GAME_LIST`, for example:
 
-```js
+```js:-
 {
   id: "my-game",
   name: "My Game",
